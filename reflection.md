@@ -25,11 +25,17 @@ Conflict detection only flags tasks with the exact same date and start time; it 
 
 **a. How you used AI**
 
-Used Claude to turn the assignment into a design, draft the Mermaid UML, generate the class skeleton and implementation, write the demo script and tests, and wire Streamlit's `session_state`. The most useful prompts named concrete constraints (e.g. Scheduler must read through `Owner.get_all_tasks()`). [Edit this section to reflect your own experience.]
+I used an AI coding assistant (Claude) as a design partner and implementer. In Phase 1 it helped me list the building blocks and draft the Mermaid class diagram. In Phase 2 it turned the UML into dataclass skeletons and then full code, and wrote the `main.py` demo and pytest tests. In Phase 3 it showed me how `st.session_state` keeps the `Owner` alive across Streamlit reruns. In Phase 4 it helped with the sort key, recurrence with `timedelta`, and conflict detection.
+
+The most helpful prompts were specific about structure, such as "the Scheduler must get tasks through `Owner.get_all_tasks()`, not from a single pet," and ones that asked for a lightweight approach, such as conflict detection that returns a warning instead of crashing. Vague prompts gave generic code; constrained prompts gave code I could check.
 
 **b. Judgment and verification**
 
-[Write your own example here.] Suggested: I kept `HH:MM` strings sorted with a lambda key rather than parsing to `datetime`, because zero-padded strings already sort correctly and it is easier to read. I verified behavior by running `main.py` with tasks added out of order and by the pytest suite.
+When I asked for a simpler, more Pythonic version of `detect_conflicts`, the suggestion was to collapse it into a `collections.Counter` or `itertools.groupby` one-liner over (date, time) keys. It was shorter, but it only reports *that* a clash exists, not *which* tasks and pets clash, and the warning message needs that. I kept the explicit `setdefault` loop because it is easier to read and gives the owner a useful message.
+
+I similarly kept `HH:MM` strings with a lambda sort key instead of parsing every time into `datetime`: zero-padded strings already sort correctly.
+
+I verified the AI's code by running `main.py` with tasks added out of order and with a deliberate same-time conflict, checking the output by eye, and by the pytest suite (11 passing tests). I also smoke-tested the Streamlit app with `streamlit.testing.v1.AppTest`: adding a pet and a task.
 
 ## 4. Testing and Verification
 
