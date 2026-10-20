@@ -44,14 +44,30 @@ pip install -r requirements.txt
 
 ## 🖥️ Sample Output
 
-Paste a sample of your app's CLI or Streamlit output here so a reader can see what a generated plan looks like:
+Output of `python main.py`:
 
 ```
-# e.g.:
-# Daily plan for Biscuit (Golden Retriever):
-#   08:00 — Morning walk (30 min) [priority: high]
-#   09:00 — Feeding (10 min) [priority: high]
-#   ...
+Today's Schedule
+----------------
+  [ ] 07:30  Morning walk       Biscuit   30 min  high   daily
+  [ ] 08:00  Feeding            Mochi     10 min  high   daily
+  [ ] 08:00  Flea medicine      Mochi      5 min  high   weekly
+  [ ] 12:15  Play session       Mochi     20 min  low    once
+  [ ] 18:00  Evening walk       Biscuit   30 min  medium daily
+
+WARNING: Conflict on 2026-10-20 at 08:00: Feeding (Mochi), Flea medicine (Mochi)
+
+Mochi only
+----------
+  [ ] 08:00  Feeding            Mochi     10 min  high   daily
+  [ ] 08:00  Flea medicine      Mochi      5 min  high   weekly
+  [ ] 12:15  Play session       Mochi     20 min  low    once
+
+Completed 'Morning walk'; next occurrence due 2026-10-21 (today is 2026-10-20)
+
+Completed tasks
+---------------
+  [x] 07:30  Morning walk       Biscuit   30 min  high   daily
 ```
 
 ## 🧪 Testing PawPal+
@@ -67,28 +83,36 @@ pytest --cov
 Sample test output:
 
 ```
-# Paste your pytest output here
+...........                                                              [100%]
+11 passed in 0.02s
 ```
+
+## 🧩 Implementation Summary
+
+- `Task` (dataclass): description, `HH:MM` time, duration, priority, frequency, due date, completion flag.
+- `Pet` (dataclass): name, species, list of tasks.
+- `Owner`: holds pets; `get_all_tasks()` flattens every pet's tasks.
+- `Scheduler`: takes an `Owner` and reads tasks through `owner.get_all_tasks()`, so it always sees all pets. It sorts, filters, builds today's schedule, completes recurring tasks and detects conflicts.
+- `app.py` keeps the `Owner` in `st.session_state` so data survives Streamlit reruns. Run with `streamlit run app.py`.
+- UML: `diagrams/uml.mmd`.
 
 ## 📐 Smarter Scheduling
 
-> Fill in once you've implemented scheduling logic.
-
 | Feature | Method(s) | Notes |
 |---------|-----------|-------|
-| Task sorting | | e.g., by priority, duration |
-| Filtering | | e.g., skip tasks if time runs out |
-| Conflict handling | | e.g., overlapping time slots |
-| Recurring tasks | | e.g., daily vs. weekly |
+| Task sorting | `Scheduler.sort_by_time`, `sort_by_priority` | `sorted()` with a lambda key; zero-padded `"HH:MM"` strings sort correctly as text |
+| Filtering | `Scheduler.filter_tasks(pet_name, completed)` | Either filter optional; `None` means no filter |
+| Conflict handling | `Scheduler.detect_conflicts` | Warning strings for pending tasks sharing a date and start time, across pets; never raises |
+| Recurring tasks | `Task.mark_complete`, `Scheduler.mark_task_complete` | Daily = +1 day, weekly = +7 days via `timedelta`; next occurrence added to the same pet |
 
 ## 📸 Demo Walkthrough
 
 Describe your app in numbered steps so a reader can follow along without watching a video:
 
-1. <!-- Describe this step -->
-2. <!-- Describe this step -->
-3. <!-- Describe this step -->
-4. <!-- Describe this step -->
-5. <!-- Add more steps as needed -->
+1. Enter the owner name and add one or more pets (name + species).
+2. Schedule tasks for a pet: description, time, duration, priority, and repeat (once/daily/weekly).
+3. If two pending tasks share a start time, a conflict warning appears.
+4. View the schedule sorted by time; filter by pet and by pending/completed.
+5. Click **Done** on a task; daily/weekly tasks automatically get a next occurrence.
 
 **Screenshot or video** *(optional)*: <!-- Insert a screenshot or link to a demo video here -->
