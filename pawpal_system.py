@@ -23,6 +23,8 @@ class Task:
 
     def mark_complete(self) -> Optional["Task"]:
         """Mark done; return the next occurrence for recurring tasks, else None."""
+        if self.completed:  # already done: don't spawn a duplicate occurrence
+            return None
         self.completed = True
         days = RECURRENCE_DAYS.get(self.frequency)
         if days is None:

@@ -73,19 +73,30 @@ Completed tasks
 ## 🧪 Testing PawPal+
 
 ```bash
-# Run the full test suite:
-pytest
-
-# Run with coverage:
-pytest --cov
+python -m pytest
 ```
+
+The 17 tests in `tests/test_pawpal.py` cover:
+
+- **Happy paths:** completing a task, adding a task to a pet, collecting tasks across all pets, chronological sorting, filtering by pet and status, priority sorting, daily (+1 day) and weekly (+7 days) recurrence, and conflict detection across pets.
+- **Edge cases:** an owner or pet with no tasks, one-off tasks that must not recur, completing a recurring task twice (no duplicate), same time on different days (no conflict), completed tasks ignored by conflict checks, and today's schedule excluding future and completed tasks.
 
 Sample test output:
 
 ```
-...........                                                              [100%]
-11 passed in 0.02s
+.................                                                        [100%]
+17 passed in 0.03s
 ```
+
+**Confidence level: ★★★★☆ (4/5).** The logic layer is well covered and the UI was smoke-tested with Streamlit's `AppTest`. Not yet covered: overlapping durations, invalid `HH:MM` input and duplicate pet names.
+
+## ✨ Features
+
+- **Multi-pet management:** one owner, many pets, each with its own tasks.
+- **Sorting by time:** tasks are ordered by due date and `HH:MM` (also sortable by priority).
+- **Filtering:** by pet name and/or pending vs. completed.
+- **Daily and weekly recurrence:** completing a recurring task automatically schedules the next one.
+- **Conflict warnings:** pending tasks that share a date and start time are flagged in the UI, never crashing the app.
 
 ## 🧩 Implementation Summary
 
@@ -94,7 +105,7 @@ Sample test output:
 - `Owner`: holds pets; `get_all_tasks()` flattens every pet's tasks.
 - `Scheduler`: takes an `Owner` and reads tasks through `owner.get_all_tasks()`, so it always sees all pets. It sorts, filters, builds today's schedule, completes recurring tasks and detects conflicts.
 - `app.py` keeps the `Owner` in `st.session_state` so data survives Streamlit reruns. Run with `streamlit run app.py`.
-- UML: `diagrams/uml.mmd`.
+- UML: `diagrams/uml_final.mmd` (final), `diagrams/uml.mmd` (working copy).
 
 ## 📐 Smarter Scheduling
 
@@ -107,12 +118,42 @@ Sample test output:
 
 ## 📸 Demo Walkthrough
 
-Describe your app in numbered steps so a reader can follow along without watching a video:
+**Main UI features:** add pets, schedule tasks (time, duration, priority, repeat), see a conflict banner, browse a sorted and filterable schedule table, and mark tasks complete.
 
-1. Enter the owner name and add one or more pets (name + species).
-2. Schedule tasks for a pet: description, time, duration, priority, and repeat (once/daily/weekly).
-3. If two pending tasks share a start time, a conflict warning appears.
-4. View the schedule sorted by time; filter by pet and by pending/completed.
-5. Click **Done** on a task; daily/weekly tasks automatically get a next occurrence.
+**Example workflow:**
+
+1. Enter the owner name and add a pet (e.g. Mochi, cat), then add a second pet.
+2. Schedule a task for a pet: description, time, duration, priority, and repeat (once/daily/weekly).
+3. Schedule a second task at the same time. A warning appears naming the clashing tasks.
+4. View the schedule table, sorted by time; filter it by pet and by pending/completed.
+5. Pick a daily task under **Mark a task complete**. It is checked off and tomorrow's occurrence is added automatically.
+
+**Key Scheduler behaviors shown:** sorting by time, filtering, conflict warnings, and daily/weekly recurrence.
+
+**CLI output** (`python main.py`):
+
+```
+Today's Schedule
+----------------
+  [ ] 07:30  Morning walk       Biscuit   30 min  high   daily
+  [ ] 08:00  Feeding            Mochi     10 min  high   daily
+  [ ] 08:00  Flea medicine      Mochi      5 min  high   weekly
+  [ ] 12:15  Play session       Mochi     20 min  low    once
+  [ ] 18:00  Evening walk       Biscuit   30 min  medium daily
+
+WARNING: Conflict on 2026-10-20 at 08:00: Feeding (Mochi), Flea medicine (Mochi)
+
+Mochi only
+----------
+  [ ] 08:00  Feeding            Mochi     10 min  high   daily
+  [ ] 08:00  Flea medicine      Mochi      5 min  high   weekly
+  [ ] 12:15  Play session       Mochi     20 min  low    once
+
+Completed 'Morning walk'; next occurrence due 2026-10-21 (today is 2026-10-20)
+
+Completed tasks
+---------------
+  [x] 07:30  Morning walk       Biscuit   30 min  high   daily
+```
 
 **Screenshot or video** *(optional)*: <!-- Insert a screenshot or link to a demo video here -->

@@ -45,34 +45,58 @@ with st.form("add_task", clear_on_submit=False):
             Task(description, when.strftime("%H:%M"), int(duration), priority, frequency)
         )
         st.success(f"Scheduled '{description}' for {target}.")
-        for warning in scheduler.detect_conflicts():
-            st.warning(warning)
 
 st.divider()
-st.subheader("Today's schedule")
+st.subheader("Schedule")
 
-for warning in scheduler.detect_conflicts():
-    st.warning(f"⚠️ {warning}")
+conflicts = scheduler.detect_conflicts()
+if conflicts:
+    st.warning("**Heads up: some tasks overlap.** Consider moving one so you can do both.")
+    for c in conflicts:
+        st.warning(c)
+else:
+    st.success("No scheduling conflicts.")
 
-view_pet = st.selectbox("Show pet", ["All"] + [p.name for p in owner.pets])
-view_status = st.radio("Status", ["Pending", "Completed", "All"], horizontal=True)
+col_pet, col_status = st.columns(2)
+view_pet = col_pet.selectbox("Show pet", ["All"] + [p.name for p in owner.pets])
+view_status = col_status.radio("Status", ["Pending", "Completed", "All"], horizontal=True)
 
-tasks = scheduler.filter_tasks(
-    pet_name=None if view_pet == "All" else view_pet,
-    completed={"Pending": False, "Completed": True, "All": None}[view_status],
-)
-tasks = scheduler.sort_by_time(tasks)
-
-if not tasks:
-    st.info("No tasks match.")
-for i, t in enumerate(tasks):
-    col_a, col_b = st.columns([5, 1])
-    col_a.write(
-        f"**{t.time}** · {t.description} — {t.pet_name} "
-        f"({t.duration_minutes} min, {t.priority}, {t.frequency}, due {t.due_date})"
+tasks = scheduler.sort_by_time(
+    scheduler.filter_tasks(
+        pet_name=None if view_pet == "All" else view_pet,
+        completed={"Pending": False, "Completed": True, "All": None}[view_status],
     )
-    if not t.completed and col_b.button("Done", key=f"done_{id(t)}"):
-        nxt = scheduler.mark_task_complete(t)
+)
+
+if tasks:
+    st.table(
+        [
+            {
+                "Due": str(t.due_date),
+                "Time": t.time,
+                "Task": t.description,
+                "Pet": t.pet_name,
+                "Minutes": t.duration_minutes,
+                "Priority": t.priority,
+                "Repeats": t.frequency,
+                "Done": "✅" if t.completed else "",
+            }
+            for t in tasks
+        ]
+    )
+else:
+    st.info("No tasks match.")
+
+pending = scheduler.sort_by_time(scheduler.filter_tasks(completed=False))
+if pending:
+    st.subheader("Mark a task complete")
+    labels = [f"{t.due_date} {t.time} - {t.description} ({t.pet_name})" for t in pending]
+    choice = st.selectbox("Task", range(len(pending)), format_func=lambda i: labels[i])
+    if st.button("Mark complete"):
+        task = pending[choice]
+        nxt = scheduler.mark_task_complete(task)
         if nxt:
-            st.toast(f"Next '{t.description}' scheduled for {nxt.due_date}")
+            st.success(f"Done! Next '{task.description}' scheduled for {nxt.due_date}.")
+        else:
+            st.success(f"Done! '{task.description}' completed.")
         st.rerun()

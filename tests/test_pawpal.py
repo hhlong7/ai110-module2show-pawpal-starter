@@ -98,3 +98,55 @@ def test_no_conflict_when_times_differ_or_task_done():
 def test_empty_owner_is_safe():
     s = Scheduler(Owner("Nobody"))
     assert s.todays_schedule() == [] and s.detect_conflicts() == []
+
+
+# --- Edge cases (Phase 5) ---
+
+
+def test_pet_with_no_tasks():
+    owner, mochi, _ = make_owner()
+    s = Scheduler(owner)
+    assert mochi.tasks == [] and s.todays_schedule() == []
+    assert s.filter_tasks(pet_name="Mochi") == []
+
+
+def test_same_time_tasks_for_same_pet_conflict():
+    owner, mochi, _ = make_owner()
+    mochi.add_task(Task("Feeding", "09:00"))
+    mochi.add_task(Task("Meds", "09:00"))
+    assert len(Scheduler(owner).detect_conflicts()) == 1
+
+
+def test_same_time_on_different_days_is_not_a_conflict():
+    owner, mochi, _ = make_owner()
+    mochi.add_task(Task("Feeding", "09:00"))
+    mochi.add_task(Task("Feeding", "09:00", due_date=date.today() + timedelta(days=1)))
+    assert Scheduler(owner).detect_conflicts() == []
+
+
+def test_completing_twice_does_not_duplicate_recurring_task():
+    owner, mochi, _ = make_owner()
+    task = Task("Feeding", frequency="daily")
+    mochi.add_task(task)
+    s = Scheduler(owner)
+    s.mark_task_complete(task)
+    assert s.mark_task_complete(task) is None
+    assert len(mochi.tasks) == 2
+
+
+def test_todays_schedule_excludes_future_and_completed_tasks():
+    owner, mochi, _ = make_owner()
+    now = Task("Now", "08:00")
+    done = Task("Done", "07:00")
+    later = Task("Tomorrow", "06:00", due_date=date.today() + timedelta(days=1))
+    for t in (now, done, later):
+        mochi.add_task(t)
+    done.mark_complete()
+    assert Scheduler(owner).todays_schedule() == [now]
+
+
+def test_sort_by_priority_puts_high_first():
+    owner, mochi, _ = make_owner()
+    mochi.add_task(Task("Low", "07:00", priority="low"))
+    mochi.add_task(Task("High", "09:00", priority="high"))
+    assert [t.description for t in Scheduler(owner).sort_by_priority()] == ["High", "Low"]
